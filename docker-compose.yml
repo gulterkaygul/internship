@@ -1,9 +1,28 @@
 version: '3.8'
 
 services:
-  nicegui-app:
-    build: .
+  db:
+    image: postgres
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: gulter
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: internship_db
     ports:
-      - "8080:8080"
+      - "5432:5432"
     volumes:
-      - .:/app
+      - pg_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: gulter@example.com
+      PGADMIN_DEFAULT_PASSWORD: 1234
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  pg_data:

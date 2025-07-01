@@ -21,8 +21,8 @@ def home():
 # ---------- Admin Sayfası ----------
 @ui.page('/admin')
 def admin_panel():
+    global user_table, book_table
     with ui.column().classes('w-full items-center justify-center min-h-screen bg-white'):
-
         ui.label('🔐 Admin Panel').classes('text-2xl font-bold mb-4')
 
         # USER EKLEME FORMU
@@ -33,16 +33,20 @@ def admin_panel():
             password = ui.input('Password').classes('mb-2')
 
             def save_user():
-                if name.value and password.value:
-                    hashed = hash_password(password.value)
-                    session.add(User(name=name.value, email=email.value, password=hashed))
-                    session.commit()
-                    name.value, email.value, password.value = "", "", ""
-                    user_table.rows = fetch_users()
-                    user_table.update()
-                    ui.notify("User saved")
-                else:
-                    ui.notify("Fill all fields")
+                try:
+                    if name.value and password.value:
+                        hashed = hash_password(password.value)
+                        session.add(User(name=name.value, email=email.value, password=hashed))
+                        session.commit()
+                        name.value, email.value, password.value = "", "", ""
+                        user_table.rows = fetch_users()
+                        user_table.update()
+                        ui.notify("User saved")
+                    else:
+                        ui.notify("Fill all fields")
+                except Exception as e:
+                    session.rollback()
+                    ui.notify(f"Hata oluştu: {e}")
 
             ui.button('Save User', on_click=save_user).classes('w-full')
 
@@ -51,22 +55,25 @@ def admin_panel():
             book_title = ui.input('Book Title').classes('mb-2')
 
             def save_book():
-                if book_title.value:
-                    session.add(Book(title=book_title.value))
-                    session.commit()
-                    book_title.value = ""
-                    book_table.rows = fetch_books()
-                    book_table.update()
-                    ui.notify("Book saved")
-                else:
-                    ui.notify("Enter a book title")
+                try:
+                    if book_title.value:
+                        session.add(Book(title=book_title.value))
+                        session.commit()
+                        book_title.value = ""
+                        book_table.rows = fetch_books()
+                        book_table.update()
+                        ui.notify("Book saved")
+                    else:
+                        ui.notify("Enter a book title")
+                except Exception as e:
+                    session.rollback()
+                    ui.notify(f"Hata oluştu: {e}")
 
             ui.button('Add Book', on_click=save_book).classes('w-full')
 
         # USER TABLE
         with ui.card().classes('w-full max-w-screen-md p-4 mb-4'):
             ui.label('Users Table').classes('font-bold mb-2')
-            global user_table
             user_table = ui.table(columns=[
                 {'label': 'Name', 'field': 'name'},
                 {'label': 'Password', 'field': 'password'},
@@ -76,7 +83,6 @@ def admin_panel():
         # BOOK TABLE
         with ui.card().classes('w-full max-w-screen-md p-4'):
             ui.label('Books Table').classes('font-bold mb-2')
-            global book_table
             book_table = ui.table(columns=[
                 {'label': 'Title', 'field': 'title'},
                 {'label': 'Status', 'field': 'status'},

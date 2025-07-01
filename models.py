@@ -1,3 +1,4 @@
+import os
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy import create_engine
@@ -5,7 +6,10 @@ from passlib.context import CryptContext
 
 Base = declarative_base()
 
-engine = create_engine('postgresql://postgres:supersecret@my-postgres:5432/postgres', echo=True)
+DATABASE_URL = "postgresql+psycopg2://gulter:1234@localhost:5432/internship_db"
+
+
+engine = create_engine(DATABASE_URL, echo=True)
 Session = sessionmaker(bind=engine)
 session = Session()
 
