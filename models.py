@@ -33,6 +33,7 @@ class User(Base):
     name = Column(String)
     password = Column(String)  # hashed password
     email = Column(String, unique=True)
+    role = Column(String, default="user")
 
 class Book(Base):
     __tablename__ = 'books'
