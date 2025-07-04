@@ -10,6 +10,8 @@ WORKDIR /app
 # Tüm dosyaları konteynıra kopyala
 COPY requirements.txt . 
 
+COPY static ./static
+
 COPY . . 
 
 # Gerekli kütüphaneleri yükle
