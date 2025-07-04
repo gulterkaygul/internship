@@ -195,11 +195,11 @@ def admin_panel():
                 ],
                 rows=fetch_users(),
                 row_key='id',
-                multiple=True  # Çoklu seçim aktif
+                selection='multiple'  # Çoklu seçim aktif
             )
 
             def delete_selected_users():
-                selected_ids = [row['id'] for row in user_table.get_selected_rows()]
+                selected_ids = [row['id'] for row in user_table.selected]
                 if not selected_ids:
                     ui.notify("Select user(s) to delete", color='red')
                     return
@@ -250,11 +250,11 @@ def admin_panel():
                 ],
                 rows=fetch_books(),
                 row_key='id',
-                multiple=True  # Çoklu seçim aktif
+                selection='multiple'  # Çoklu seçim aktif
             )
 
             def delete_selected_books():
-                selected_ids = [row['id'] for row in book_table.get_selected_rows()]
+                selected_ids = [row['id'] for row in book_table.selected]
                 if not selected_ids:
                     ui.notify("Select book(s) to delete", color='red')
                     return
