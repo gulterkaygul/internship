@@ -6,7 +6,7 @@ current_user = {'user': None}
 
 def fetch_users():
     users = session.query(User).all()
-    return [{'id': u.id, 'name': u.name, 'email': u.email} for u in users]
+    return [{'id': u.id, 'name': u.name, 'email': u.email, 'password': u.password} for u in users]
 
 def fetch_books():
     books = session.query(Book).all()
@@ -192,6 +192,7 @@ def admin_panel():
                     {'label': 'ID', 'field': 'id'},
                     {'label': 'Name', 'field': 'name'},
                     {'label': 'Email', 'field': 'email'},
+                    {'label': 'Password', 'field': 'password'},
                 ],
                 rows=fetch_users(),
                 row_key='id',
