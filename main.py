@@ -1,5 +1,7 @@
-from nicegui import ui
+from nicegui import app, ui
 from models import User, session, Book, hash_password, verify_password
+
+app.add_static_files('/static', 'static') #static dosyalari nicegui ye tanit
 
 # Global current_user tanımı
 current_user = {'user': None}
@@ -153,126 +155,131 @@ def admin_panel():
     global user_table, book_table
 
     with ui.column().classes('w-full items-center justify-center min-h-screen bg-white'):
-        ui.label('🔐 Admin Panel').classes('text-2xl font-bold mb-4')
+        ui.image('/static/logo.png').classes('w-20 mt-6')
+        ui.label('📚 Admin Panel').classes('text-3xl font-bold mb-4')
 
-        # Kullanıcı Ekleme
-        with ui.card().classes('w-96 p-4 mb-4'):
-            ui.label('Add User').classes('font-bold mb-2')
-            name = ui.input('Name').classes('mb-2')
-            email = ui.input('Email').classes('mb-2')
-            password = ui.input('Password').classes('mb-2')
+        with ui.tabs().classes('w-full max-w-screen-md') as tabs:
+            ui.tab('Users Table')
+            ui.tab('Books Table')
 
-            def save_user():
-                try:
-                    if name.value and password.value and email.value:
-                        # Email kayıtlı mı kontrolü
-                        if session.query(User).filter_by(email=email.value).first():
-                            ui.notify("Email already registered.", color="orange")
+        with ui.tab_panels(tabs, value='Users Table').classes('w-full max-w-screen-md'):
+
+            # USERS TAB
+            with ui.tab_panel('Users Table'):
+                with ui.card().classes('w-full p-4 mb-4'):
+                    ui.label('Add User').classes('font-bold mb-2')
+                    name = ui.input('Name').classes('mb-2')
+                    email = ui.input('Email').classes('mb-2')
+                    password = ui.input('Password').classes('mb-2')
+
+                    def save_user():
+                        try:
+                            if name.value and password.value and email.value:
+                                if session.query(User).filter_by(email=email.value).first():
+                                    ui.notify("Email already registered.", color="orange")
+                                    return
+                                hashed = hash_password(password.value)
+                                session.add(User(name=name.value, email=email.value, password=hashed))
+                                session.commit()
+                                name.value, email.value, password.value = "", "", ""
+                                user_table.rows = fetch_users()
+                                user_table.update()
+                                ui.notify("User saved")
+                            else:
+                                ui.notify("Fill all fields", color='red')
+                        except Exception as e:
+                            session.rollback()
+                            ui.notify(f"Error: {e}", color='red')
+
+                    ui.button('Save User', on_click=save_user).classes('w-full bg-green-500 text-white')
+
+                with ui.card().classes('w-full p-4'):
+                    ui.label('Users List').classes('font-bold mb-2')
+                    user_table = ui.table(
+                        columns=[
+                            {'label': 'ID', 'field': 'id'},
+                            {'label': 'Name', 'field': 'name'},
+                            {'label': 'Email', 'field': 'email'},
+                        ],
+                        rows=fetch_users(),
+                        row_key='id',
+                        selection='multiple'
+                    )
+
+                    def delete_selected_users():
+                        selected_ids = [row['id'] for row in user_table.selected]
+                        if not selected_ids:
+                            ui.notify("Select user(s) to delete", color='red')
                             return
-                        hashed = hash_password(password.value)
-                        session.add(User(name=name.value, email=email.value, password=hashed))
-                        session.commit()
-                        name.value, email.value, password.value = "", "", ""
-                        user_table.rows = fetch_users()
-                        user_table.update()
-                        ui.notify("User saved")
-                    else:
-                        ui.notify("Fill all fields", color='red')
-                except Exception as e:
-                    session.rollback()
-                    ui.notify(f"Error: {e}", color='red')
+                        try:
+                            for uid in selected_ids:
+                                user = session.get(User, uid)
+                                if user:
+                                    session.delete(user)
+                            session.commit()
+                            user_table.rows = fetch_users()
+                            user_table.update()
+                            ui.notify("Selected users deleted")
+                        except Exception as e:
+                            session.rollback()
+                            ui.notify(f"Error: {e}", color='red')
 
-            ui.button('Save User', on_click=save_user).classes('w-full')
+                    ui.button('Delete Selected Users', on_click=delete_selected_users).classes('mt-2 bg-red-500 text-white')
 
-        # Kullanıcı Tablosu (Silme işlemi için)
-        with ui.card().classes('w-full max-w-screen-md p-4 mb-4'):
-            ui.label('Users Table').classes('font-bold mb-2')
-            user_table = ui.table(
-                columns=[
-                    {'label': 'ID', 'field': 'id'},
-                    {'label': 'Name', 'field': 'name'},
-                    {'label': 'Email', 'field': 'email'},
-                    {'label': 'Password', 'field': 'password'},
-                ],
-                rows=fetch_users(),
-                row_key='id',
-                selection='multiple'  # Çoklu seçim aktif
-            )
+            # BOOKS TAB
+            with ui.tab_panel('Books Table'):
+                with ui.card().classes('w-full p-4 mb-4'):
+                    book_title = ui.input('Book Title').classes('mb-2')
 
-            def delete_selected_users():
-                selected_ids = [row['id'] for row in user_table.selected]
-                if not selected_ids:
-                    ui.notify("Select user(s) to delete", color='red')
-                    return
-                try:
-                    for uid in selected_ids:
-                        user = session.get(User, uid)
-                        if user:
-                            session.delete(user)
-                    session.commit()
-                    user_table.rows = fetch_users()
-                    user_table.update()
-                    ui.notify("Selected users deleted")
-                except Exception as e:
-                    session.rollback()
-                    ui.notify(f"Error: {e}", color='red')
+                    def save_book():
+                        try:
+                            if book_title.value:
+                                session.add(Book(title=book_title.value))
+                                session.commit()
+                                book_title.value = ""
+                                book_table.rows = fetch_books()
+                                book_table.update()
+                                ui.notify("Book saved")
+                            else:
+                                ui.notify("Enter a book title", color='red')
+                        except Exception as e:
+                            session.rollback()
+                            ui.notify(f"Error: {e}", color='red')
 
-            ui.button('Delete Selected Users', on_click=delete_selected_users).classes('mt-2')
+                    ui.button('Add Book', on_click=save_book).classes('w-full bg-green-500 text-white')
 
-        # Kitap Ekleme
-        with ui.card().classes('w-96 p-4 mb-4'):
-            book_title = ui.input('Book Title').classes('mb-2')
+                with ui.card().classes('w-full p-4'):
+                    ui.label('Books List').classes('font-bold mb-2')
+                    book_table = ui.table(
+                        columns=[
+                            {'label': 'ID', 'field': 'id'},
+                            {'label': 'Title', 'field': 'title'},
+                            {'label': 'Status', 'field': 'status'},
+                        ],
+                        rows=fetch_books(),
+                        row_key='id',
+                        selection='multiple'
+                    )
 
-            def save_book():
-                try:
-                    if book_title.value:
-                        session.add(Book(title=book_title.value))
-                        session.commit()
-                        book_title.value = ""
-                        book_table.rows = fetch_books()
-                        book_table.update()
-                        ui.notify("Book saved")
-                    else:
-                        ui.notify("Enter a book title", color='red')
-                except Exception as e:
-                    session.rollback()
-                    ui.notify(f"Error: {e}", color='red')
+                    def delete_selected_books():
+                        selected_ids = [row['id'] for row in book_table.selected]
+                        if not selected_ids:
+                            ui.notify("Select book(s) to delete", color='red')
+                            return
+                        try:
+                            for bid in selected_ids:
+                                book = session.get(Book, bid)
+                                if book:
+                                    session.delete(book)
+                            session.commit()
+                            book_table.rows = fetch_books()
+                            book_table.update()
+                            ui.notify("Selected books deleted")
+                        except Exception as e:
+                            session.rollback()
+                            ui.notify(f"Error: {e}", color='red')
 
-            ui.button('Add Book', on_click=save_book).classes('w-full')
-
-        # Kitap Tablosu (Silme işlemi için)
-        with ui.card().classes('w-full max-w-screen-md p-4'):
-            ui.label('Books Table').classes('font-bold mb-2')
-            book_table = ui.table(
-                columns=[
-                    {'label': 'ID', 'field': 'id'},
-                    {'label': 'Title', 'field': 'title'},
-                    {'label': 'Status', 'field': 'status'},
-                ],
-                rows=fetch_books(),
-                row_key='id',
-                selection='multiple'  # Çoklu seçim aktif
-            )
-
-            def delete_selected_books():
-                selected_ids = [row['id'] for row in book_table.selected]
-                if not selected_ids:
-                    ui.notify("Select book(s) to delete", color='red')
-                    return
-                try:
-                    for bid in selected_ids:
-                        book = session.get(Book, bid)
-                        if book:
-                            session.delete(book)
-                    session.commit()
-                    book_table.rows = fetch_books()
-                    book_table.update()
-                    ui.notify("Selected books deleted")
-                except Exception as e:
-                    session.rollback()
-                    ui.notify(f"Error: {e}", color='red')
-
-            ui.button('Delete Selected Books', on_click=delete_selected_books).classes('mt-2')
+                    ui.button('Delete Selected Books', on_click=delete_selected_books).classes('mt-2 bg-red-500 text-white')
 
 @ui.page('/user')
 def user_panel():
