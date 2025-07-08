@@ -30,7 +30,7 @@ def login_page():
     ''').classes('w-full items-center justify-center'):
 
         # Logo
-        ui.image('/static/logo.png').classes('w-24 h-24 mb-4')
+        ui.image('/static/logo2.png').classes('w-24 h-24 mb-4')
 
         with ui.card().classes('p-10 bg-white/30 backdrop-blur-md rounded-xl shadow-lg'):
 
@@ -67,7 +67,7 @@ def register_page():
         min-height: 100vh;
     ''').classes('w-full items-center justify-center'):
 
-        ui.image('/static/logo.png').classes('w-24 h-24 mb-4')
+        ui.image('/static/logo2.png').classes('w-24 h-24 mb-4')
 
         with ui.card().classes('p-10 bg-white/30 backdrop-blur-md rounded-xl shadow-lg'):
 
@@ -111,7 +111,7 @@ def forgot_password_page():
         min-height: 100vh;
     ''').classes('w-full items-center justify-center'):
 
-        ui.image('/static/logo.png').classes('w-24 h-24 mb-4')
+        ui.image('/static/logo2.png').classes('w-24 h-24 mb-4')
 
         with ui.card().classes('p-10 bg-white/30 backdrop-blur-md rounded-xl shadow-lg'):
 
@@ -155,56 +155,34 @@ def admin_panel():
     global user_table, book_table
 
     with ui.column().classes('w-full items-center justify-center min-h-screen bg-white'):
-        ui.image('/static/logo.png').classes('w-20 mt-6')
-        ui.label('📚 Admin Panel').classes('text-3xl font-bold mb-4')
+        ui.image('/static/logo2.png').classes('w-20 mt-6')
+        ui.label('Admin Panel').classes('text-3xl font-bold mb-4')
 
         with ui.tabs().classes('w-full max-w-screen-md') as tabs:
-            ui.tab('Users Table')
-            ui.tab('Books Table')
+            users_tab = ui.tab('Users Table')
+            books_tab = ui.tab('Books Table')
 
-        with ui.tab_panels(tabs, value='Users Table').classes('w-full max-w-screen-md'):
+        with ui.tab_panels(tabs, value=users_tab).classes('w-full max-w-screen-md'):
 
-            # USERS TAB
-            with ui.tab_panel('Users Table'):
+            # ====================== USERS ======================
+            with ui.tab_panel(users_tab):
                 with ui.card().classes('w-full p-4 mb-4'):
-                    ui.label('Add User').classes('font-bold mb-2')
-                    name = ui.input('Name').classes('mb-2')
-                    email = ui.input('Email').classes('mb-2')
-                    password = ui.input('Password').classes('mb-2')
+                    with ui.row().classes("w-full justify-between items-center"):
+                        ui.label('Users List').classes('font-bold text-xl')
+                        def open_add_user():
+                            add_user_dialog.open()
+                        ui.button('Add New User', on_click=open_add_user).props('flat color=primary')
 
-                    def save_user():
-                        try:
-                            if name.value and password.value and email.value:
-                                if session.query(User).filter_by(email=email.value).first():
-                                    ui.notify("Email already registered.", color="orange")
-                                    return
-                                hashed = hash_password(password.value)
-                                session.add(User(name=name.value, email=email.value, password=hashed))
-                                session.commit()
-                                name.value, email.value, password.value = "", "", ""
-                                user_table.rows = fetch_users()
-                                user_table.update()
-                                ui.notify("User saved")
-                            else:
-                                ui.notify("Fill all fields", color='red')
-                        except Exception as e:
-                            session.rollback()
-                            ui.notify(f"Error: {e}", color='red')
-
-                    ui.button('Save User', on_click=save_user).classes('w-full bg-green-500 text-white')
-
-                with ui.card().classes('w-full p-4'):
-                    ui.label('Users List').classes('font-bold mb-2')
                     user_table = ui.table(
                         columns=[
-                            {'label': 'ID', 'field': 'id'},
-                            {'label': 'Name', 'field': 'name'},
-                            {'label': 'Email', 'field': 'email'},
-                        ],
-                        rows=fetch_users(),
-                        row_key='id',
-                        selection='multiple'
-                    )
+                            {'label': 'ID', 'field': 'id', 'sortable': True},
+                            {'label': 'Name', 'field': 'name', 'sortable': True},
+                            {'label': 'Email', 'field': 'email', 'sortable': True},
+                            ],
+                            rows=fetch_users(),
+                            row_key='id',
+                            selection='multiple'
+                            ).classes("w-full").style("text-align: center; font-size: 16px;")
 
                     def delete_selected_users():
                         selected_ids = [row['id'] for row in user_table.selected]
@@ -226,40 +204,55 @@ def admin_panel():
 
                     ui.button('Delete Selected Users', on_click=delete_selected_users).classes('mt-2 bg-red-500 text-white')
 
-            # BOOKS TAB
-            with ui.tab_panel('Books Table'):
+                    # ADD USER DIALOG
+                    with ui.dialog() as add_user_dialog:
+                        with ui.card().classes("p-4 w-96"):
+                            ui.label("Add New User").classes("text-lg font-bold mb-2")
+                            name = ui.input('Name').classes('mb-2')
+                            email = ui.input('Email').classes('mb-2')
+                            password = ui.input('Password').classes('mb-4')
+
+                            def save_user():
+                                try:
+                                    if name.value and password.value and email.value:
+                                        if session.query(User).filter_by(email=email.value).first():
+                                            ui.notify("Email already registered.", color="orange")
+                                            return
+                                        hashed = hash_password(password.value)
+                                        session.add(User(name=name.value, email=email.value, password=hashed))
+                                        session.commit()
+                                        name.value, email.value, password.value = "", "", ""
+                                        add_user_dialog.close()
+                                        user_table.rows = fetch_users()
+                                        user_table.update()
+                                        ui.notify("User saved")
+                                    else:
+                                        ui.notify("Fill all fields", color='red')
+                                except Exception as e:
+                                    session.rollback()
+                                    ui.notify(f"Error: {e}", color='red')
+
+                            ui.button('Save', on_click=save_user).classes('bg-green-500 text-white w-full')
+
+            # ====================== BOOKS ======================
+            with ui.tab_panel(books_tab):
                 with ui.card().classes('w-full p-4 mb-4'):
-                    book_title = ui.input('Book Title').classes('mb-2')
+                    with ui.row().classes("w-full justify-between items-center"):
+                        ui.label('Books List').classes('font-bold text-xl')
+                        def open_add_book():
+                            add_book_dialog.open()
+                        ui.button('Add New Book', on_click=open_add_book).props('flat color=primary')
 
-                    def save_book():
-                        try:
-                            if book_title.value:
-                                session.add(Book(title=book_title.value))
-                                session.commit()
-                                book_title.value = ""
-                                book_table.rows = fetch_books()
-                                book_table.update()
-                                ui.notify("Book saved")
-                            else:
-                                ui.notify("Enter a book title", color='red')
-                        except Exception as e:
-                            session.rollback()
-                            ui.notify(f"Error: {e}", color='red')
-
-                    ui.button('Add Book', on_click=save_book).classes('w-full bg-green-500 text-white')
-
-                with ui.card().classes('w-full p-4'):
-                    ui.label('Books List').classes('font-bold mb-2')
                     book_table = ui.table(
                         columns=[
-                            {'label': 'ID', 'field': 'id'},
-                            {'label': 'Title', 'field': 'title'},
+                            {'label': 'ID', 'field': 'id', 'sortable': True},
+                            {'label': 'Title', 'field': 'title', 'sortable': True},
                             {'label': 'Status', 'field': 'status'},
                         ],
                         rows=fetch_books(),
                         row_key='id',
                         selection='multiple'
-                    )
+                    ) .classes("w-full").style("text-align: center; font-size: 16px;")
 
                     def delete_selected_books():
                         selected_ids = [row['id'] for row in book_table.selected]
@@ -280,6 +273,30 @@ def admin_panel():
                             ui.notify(f"Error: {e}", color='red')
 
                     ui.button('Delete Selected Books', on_click=delete_selected_books).classes('mt-2 bg-red-500 text-white')
+
+                    # ADD BOOK DIALOG
+                    with ui.dialog() as add_book_dialog:
+                        with ui.card().classes("p-4 w-96"):
+                            ui.label("Add New Book").classes("text-lg font-bold mb-2")
+                            book_title = ui.input('Book Title').classes('mb-4')
+
+                            def save_book():
+                                try:
+                                    if book_title.value:
+                                        session.add(Book(title=book_title.value))
+                                        session.commit()
+                                        book_title.value = ""
+                                        add_book_dialog.close()
+                                        book_table.rows = fetch_books()
+                                        book_table.update()
+                                        ui.notify("Book saved")
+                                    else:
+                                        ui.notify("Enter a book title", color='red')
+                                except Exception as e:
+                                    session.rollback()
+                                    ui.notify(f"Error: {e}", color='red')
+
+                            ui.button('Save', on_click=save_book).classes('bg-green-500 text-white w-full')
 
 @ui.page('/user')
 def user_panel():
